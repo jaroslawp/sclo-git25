@@ -68,6 +68,7 @@ Source13:       git.socket
 Source112:      git25-git@.service
 Source113:      git-daemon-scl-wrapper
 Source114:      git25-git.xinetd.in
+Source115:      git25-git.socket
 Patch0:         git-1.8-gitweb-home-link.patch
 # https://bugzilla.redhat.com/490602
 Patch1:         git-cvsimport-Ignore-cvsps-2.2b1-Branches-output.patch
@@ -521,18 +522,19 @@ install -p -c -m 755 %{SOURCE113} %{buildroot}%{_scl_root}/usr/sbin/
 %endif
 
 %if %{?scl:1}0
-install -p -c -m 644 %{SOURCE112} %{buildroot}%{_unitdir}/git@.service
+install -p -c -m 644 %{SOURCE112} %{buildroot}%{_unitdir}/git25-git@.service
+install -p -c -m 644 %{SOURCE115} %{buildroot}%{_unitdir}/git25-git.socket
 %else
 install -p -c -m 644 %{SOURCE12} %{buildroot}%{_unitdir}/git@.service
-%endif
 install -p -c -m 644 %{SOURCE13} %{buildroot}%{_unitdir}/git.socket
+%endif
 
 
 %else
 mkdir -p %{buildroot}%{_sysconfdir}/xinetd.d
 
 %if %{?scl:1}0
-install -p -c -m 75 %{SOURCE114} %{buildroot}%{_sysconfdir}/xinetd.d/git
+install -p -c -m 75 %{SOURCE114} %{buildroot}%{_sysconfdir}/xinetd.d/git25-git
 %else
 # On EL <= 5, xinetd does not enable IPv6 by default
 enable_ipv6="        # xinetd does not enable IPv6 by default
