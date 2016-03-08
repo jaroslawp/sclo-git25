@@ -46,6 +46,21 @@
 %endif
 
 
+%{?scl:
+%filter_from_provides s|perl.*Git.*||g;s|perl.*SVN.*||g;
+%filter_from_requires s|perl.*Git.*||g;s|perl.*SVN.*||g;
+%filter_setup
+}
+
+
+%if %{?scl:1}0 && 0%{?rhel} <= 7
+# overloaded by SCL
+%define git_sysconfdir /etc/
+%else
+%define git_sysconfdit %{_sysconfdir}
+%endif
+
+
 
 
 Name:           %{?scl_prefix}git
@@ -106,7 +121,7 @@ BuildRequires:  libgnome-keyring-devel
 BuildRequires:  pcre-devel
 BuildRequires:  openssl-devel
 BuildRequires:  zlib-devel >= 1.2
-BuildRequires:  pkgconfig(bash-completion)
+BuildRequires:  bash-completion
 %if %{use_systemd}
 # For macros
 BuildRequires:  systemd
@@ -531,10 +546,11 @@ install -p -c -m 644 %{SOURCE13} %{buildroot}%{_unitdir}/git.socket
 
 
 %else
-mkdir -p %{buildroot}%{_sysconfdir}/xinetd.d
+
+mkdir -p %{buildroot}%{git_sysconfdir}/xinetd.d
 
 %if %{?scl:1}0
-install -p -c -m 75 %{SOURCE114} %{buildroot}%{_sysconfdir}/xinetd.d/git25-git
+install -p -c -m 75 %{SOURCE114} %{buildroot}%{git_sysconfdir}/xinetd.d/git25-git
 %else
 # On EL <= 5, xinetd does not enable IPv6 by default
 enable_ipv6="        # xinetd does not enable IPv6 by default
@@ -545,7 +561,7 @@ perl -p \
 %if %{enable_ipv6}
     -e "s|^}|$enable_ipv6\n$&|;" \
 %endif
-    %{SOURCE3} > %{buildroot}%{_sysconfdir}/xinetd.d/git
+    %{SOURCE3} > %{buildroot}%{git_sysconfdir}/xinetd.d/git
 %endif
 %endif
 
@@ -603,13 +619,25 @@ rm -rf %{buildroot}
 
 %if %{use_systemd}
 %post daemon
+%if %{?scl:1}0
+%systemd_post git25-git@.service
+%else
 %systemd_post git@.service
+%endif
 
 %preun daemon
-%systemd_preun }git@.service
+%if %{?scl:1}0
+%systemd_preun git25-git@.service
+%else
+%systemd_preun git@.service
+%endif
 
 %postun daemon
+%if %{?scl:1}0
+%systemd_postun_with_restart git25-git@.service
+%else
 %systemd_postun_with_restart git@.service
+%endif
 %endif
 
 %files -f bin-man-doc-git-files
@@ -704,26 +732,33 @@ rm -rf %{buildroot}
 %files -n %{?scl_prefix}emacs-git
 %defattr(-,root,root)
 %doc contrib/emacs/README
-%dir %{?_scl_root}%{elispdir}
-%{?_scl_root}%{elispdir}/*.elc
+%dir %{elispdir}
+%{elispdir}/*.elc
 %{?_scl_root}%{_emacs_sitestartdir}/git-init.el
 
 %files -n %{?scl_prefix}emacs-git-el
 %defattr(-,root,root)
-%{?_scl_root}%{elispdir}/*.el
+%{elispdir}/*.el
 %endif
 
 %files daemon
 %defattr(-,root,root)
 %doc Documentation/*daemon*.txt
 %if %{use_systemd}
-%{_unitdir}/git.socket
-%{_unitdir}/git@.service
 %if %{?scl:1}0
 %{?_scl_root}/usr/sbin/git-daemon-scl-wrapper
+%{_unitdir}/git25-git.socket
+%{_unitdir}/git25-git@.service
+%else
+%{_unitdir}/git.socket
+%{_unitdir}/git@.service
 %endif
 %else
-%config(noreplace)%{_sysconfdir}/xinetd.d/git
+%if %{?scl:1}0
+%config(noreplace)%{git_sysconfdir}/xinetd.d/git25-git
+%else
+%config(noreplace)%{git_sysconfdir}/xinetd.d/git
+%endif
 %endif
 %{gitcoredir}/git-daemon
 %{_var}/lib/git
